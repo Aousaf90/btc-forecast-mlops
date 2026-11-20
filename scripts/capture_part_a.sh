@@ -11,6 +11,9 @@ PY="$ROOT/venv/bin/python"
 LOGS="$ROOT/screenshots/logs"
 mkdir -p "$LOGS"
 
+# Replace the absolute home path with ~ in every transcript, so the published
+# logs carry no local filesystem identity.
+scrub () { sed -i "s|$HOME|~|g" "$LOGS"/*.txt 2>/dev/null || true; }
 banner () { printf '\n\033[1;36m%s\033[0m\n%s\n' "$1" "$(printf '=%.0s' $(seq 1 ${#1}))"; }
 jq_ () { "$PY" -m json.tool; }
 
@@ -72,5 +75,6 @@ banner "A2  INPUT VALIDATION & ERROR HANDLING"
 } | tee "$LOGS/A2_validation.txt"
 
 kill -TERM $GPID 2>/dev/null
+scrub
 banner "DONE - transcripts saved to screenshots/logs/"
 ls -1 "$LOGS" | sed 's/^/  /'

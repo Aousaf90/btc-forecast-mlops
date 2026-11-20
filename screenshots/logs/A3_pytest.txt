@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform linux -- Python 3.12.3, pytest-8.3.3, pluggy-1.7.0
-rootdir: /home/talha/Desktop/Aousaf-Assignment
+rootdir: ~/Desktop/Aousaf-Assignment
 configfile: setup.cfg
 plugins: cov-5.0.0, platformdirs-4.14.7
 collected 85 items

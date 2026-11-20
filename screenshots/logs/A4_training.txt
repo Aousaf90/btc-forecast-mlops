@@ -2,7 +2,7 @@
 2026-11-20 15:52:14,590 [INFO] __main__: Fitting validation model on 365 rows...
 2026-11-20 15:52:14,715 [INFO] __main__: Hold-out metrics: MAE=6162.80 RMSE=6272.82 MAPE=9.583%
 2026-11-20 15:52:14,715 [INFO] __main__: Refitting on 365 rows (2025-11-20 -> 2026-11-19) for the production artifact...
-2026-11-20 15:52:14,786 [INFO] __main__: Saved model to /home/talha/Desktop/Aousaf-Assignment/models/prophet_model.json (60.0 KB)
+2026-11-20 15:52:14,786 [INFO] __main__: Saved model to ~/Desktop/Aousaf-Assignment/models/prophet_model.json (60.0 KB)
 2026-11-20 15:52:14,787 [INFO] __main__: Registered model version 20261120105214715
 
 ====================================================================
