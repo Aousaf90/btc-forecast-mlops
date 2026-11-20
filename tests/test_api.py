@@ -120,16 +120,12 @@ class TestPredict:
         assert fragment in body["message"]
 
     def test_rejects_malformed_json(self, client):
-        resp = client.post(
-            "/predict", data="{not valid json", content_type="application/json"
-        )
+        resp = client.post("/predict", data="{not valid json", content_type="application/json")
         assert resp.status_code == 400
         assert "valid JSON" in resp.get_json()["message"]
 
     def test_rejects_non_object_body(self, client):
-        resp = client.post(
-            "/predict", data=json.dumps([1, 2, 3]), content_type="application/json"
-        )
+        resp = client.post("/predict", data=json.dumps([1, 2, 3]), content_type="application/json")
         assert resp.status_code == 400
         assert "must be a JSON object" in resp.get_json()["message"]
 

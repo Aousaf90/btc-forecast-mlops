@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tests.conftest import make_price_series
-
 
 # ---------------------------------------------------------------------------
 # Metrics
@@ -197,7 +195,11 @@ class TestEtl:
             return pd.DataFrame(
                 {
                     "Date": pd.date_range("2026-01-01", periods=5),
-                    "Open": 1.0, "High": 1.0, "Low": 1.0, "Close": 1.0, "Volume": 1.0,
+                    "Open": 1.0,
+                    "High": 1.0,
+                    "Low": 1.0,
+                    "Close": 1.0,
+                    "Volume": 1.0,
                 }
             )
 

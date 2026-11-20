@@ -97,9 +97,12 @@ class ModelStore:
             self._metrics = metrics
             # Fall back to the artifact mtime when metrics.json is absent, so a
             # model is never reported as version-less.
-            self._version = metrics.get("model_version") or datetime.fromtimestamp(
-                model_path.stat().st_mtime, tz=timezone.utc
-            ).strftime("%Y%m%d%H%M%S%f")[:-3]
+            self._version = (
+                metrics.get("model_version")
+                or datetime.fromtimestamp(model_path.stat().st_mtime, tz=timezone.utc).strftime(
+                    "%Y%m%d%H%M%S%f"
+                )[:-3]
+            )
             self._loaded_at = datetime.now(timezone.utc).isoformat()
 
             log.info("Loaded model version %s from %s", self._version, model_path)

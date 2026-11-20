@@ -8,7 +8,6 @@ on a clean CI checkout where models/ does not exist at all.
 from __future__ import annotations
 
 import importlib
-import json
 import sys
 from pathlib import Path
 
