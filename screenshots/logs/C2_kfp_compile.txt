@@ -1,0 +1,14 @@
+=== C2: KFP pipeline compilation ===
+Compiled pipeline 'btc-7day-forecast-pipeline' -> ~/Desktop/Aousaf-Assignment/kubeflow/btc_kfp_pipeline.yaml (5.7 KB)
+Components: ingest_btc_data, generate_features, train_forecast_model
+Image:      aousafs/btc-forecast-api:latest
+
+=== compiled spec summary ===
+pipeline      : btc-7day-forecast-pipeline
+schemaVersion : 2.1.0   sdkVersion: kfp-2.9.0
+components    : comp-generate-features, comp-ingest-btc-data, comp-train-forecast-model
+
+task dependency graph:
+  generate-features          <- ['ingest-btc-data']
+  ingest-btc-data            <- (entry point)
+  train-forecast-model       <- ['generate-features']

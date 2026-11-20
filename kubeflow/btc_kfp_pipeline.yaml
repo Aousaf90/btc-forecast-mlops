@@ -1,0 +1,201 @@
+# PIPELINE DEFINITION
+# Name: btc-7day-forecast-pipeline
+# Description: Daily BTC-USD ingestion, feature engineering and Prophet retraining for a 7-day close-price forecast.
+# Inputs:
+#    horizon: int [Default: 7.0]
+#    mape_threshold: float [Default: 15.0]
+#    period: str [Default: '5y']
+#    ticker: str [Default: 'BTC-USD']
+#    train_window_days: int [Default: 365.0]
+components:
+  comp-generate-features:
+    executorLabel: exec-generate-features
+    inputDefinitions:
+      artifacts:
+        raw_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        features:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-ingest-btc-data:
+    executorLabel: exec-ingest-btc-data
+    inputDefinitions:
+      parameters:
+        period:
+          defaultValue: 5y
+          isOptional: true
+          parameterType: STRING
+        ticker:
+          defaultValue: BTC-USD
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        raw_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-train-forecast-model:
+    executorLabel: exec-train-forecast-model
+    inputDefinitions:
+      artifacts:
+        features:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        horizon:
+          defaultValue: 7.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        mape_threshold:
+          defaultValue: 15.0
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        train_window_days:
+          defaultValue: 365.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        model_dir:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-generate-features:
+      container:
+        args:
+        - --raw
+        - '{{$.inputs.artifacts[''raw_data''].path}}'
+        - --out
+        - '{{$.outputs.artifacts[''features''].path}}'
+        command:
+        - python
+        - -m
+        - src.features
+        image: aousafs/btc-forecast-api:latest
+    exec-ingest-btc-data:
+      container:
+        args:
+        - --ticker
+        - '{{$.inputs.parameters[''ticker'']}}'
+        - --period
+        - '{{$.inputs.parameters[''period'']}}'
+        - --out
+        - '{{$.outputs.artifacts[''raw_data''].path}}'
+        command:
+        - python
+        - -m
+        - src.etl_fetch
+        image: aousafs/btc-forecast-api:latest
+    exec-train-forecast-model:
+      container:
+        args:
+        - set -e; mkdir -p "$0"; export MODEL_DIR="$0"; python -m src.train_forecast
+          --features "$1" --horizon "$2" --mape-threshold "$3" --train-window-days
+          "$4"
+        - '{{$.outputs.artifacts[''model_dir''].path}}'
+        - '{{$.inputs.artifacts[''features''].path}}'
+        - '{{$.inputs.parameters[''horizon'']}}'
+        - '{{$.inputs.parameters[''mape_threshold'']}}'
+        - '{{$.inputs.parameters[''train_window_days'']}}'
+        command:
+        - sh
+        - -c
+        image: aousafs/btc-forecast-api:latest
+        resources:
+          cpuLimit: 1.0
+          memoryLimit: 1.073741824
+pipelineInfo:
+  description: Daily BTC-USD ingestion, feature engineering and Prophet retraining
+    for a 7-day close-price forecast.
+  name: btc-7day-forecast-pipeline
+root:
+  dag:
+    tasks:
+      generate-features:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-generate-features
+        dependentTasks:
+        - ingest-btc-data
+        inputs:
+          artifacts:
+            raw_data:
+              taskOutputArtifact:
+                outputArtifactKey: raw_data
+                producerTask: ingest-btc-data
+        taskInfo:
+          name: Generate features
+      ingest-btc-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-ingest-btc-data
+        inputs:
+          parameters:
+            period:
+              componentInputParameter: period
+            ticker:
+              componentInputParameter: ticker
+        retryPolicy:
+          backoffDuration: 60s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 3
+        taskInfo:
+          name: Ingest BTC-USD data
+      train-forecast-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-forecast-model
+        dependentTasks:
+        - generate-features
+        inputs:
+          artifacts:
+            features:
+              taskOutputArtifact:
+                outputArtifactKey: features
+                producerTask: generate-features
+          parameters:
+            horizon:
+              componentInputParameter: horizon
+            mape_threshold:
+              componentInputParameter: mape_threshold
+            train_window_days:
+              componentInputParameter: train_window_days
+        taskInfo:
+          name: Train and evaluate Prophet model
+  inputDefinitions:
+    parameters:
+      horizon:
+        defaultValue: 7.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      mape_threshold:
+        defaultValue: 15.0
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      period:
+        defaultValue: 5y
+        isOptional: true
+        parameterType: STRING
+      ticker:
+        defaultValue: BTC-USD
+        isOptional: true
+        parameterType: STRING
+      train_window_days:
+        defaultValue: 365.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.9.0
