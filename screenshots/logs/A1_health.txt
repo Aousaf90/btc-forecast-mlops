@@ -1,0 +1,1 @@
+{"model_loaded":true,"model_loaded_at":"2026-11-20T10:52:34.314907+00:00","model_stage":"development","model_version":"20261120105214715","status":"ok","timestamp":"2026-11-20T10:53:04.627543+00:00","uptime_seconds":30.34}

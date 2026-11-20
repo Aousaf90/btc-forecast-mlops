@@ -1,0 +1,28 @@
+
+$ curl -X POST /predict -d {"forecast_days":-1}
+  -> HTTP 400  {"error":"Bad Request","message":"forecast_days must be between 1 and 90, got -1"}
+
+
+$ curl -X POST /predict -d {"forecast_days":"seven"}
+  -> HTTP 400  {"error":"Bad Request","message":"forecast_days must be a number, got str"}
+
+
+$ curl -X POST /predict -d {"forecast_days":null}
+  -> HTTP 400  {"error":"Bad Request","message":"forecast_days cannot be null"}
+
+
+$ curl -X POST /predict -d {bad json
+  -> HTTP 400  {"error":"Bad Request","message":"request body is not valid JSON; send a JSON object or an empty body"}
+
+
+$ curl -X POST /predict -d [1,2,3]
+  -> HTTP 400  {"error":"Bad Request","message":"request body must be a JSON object, got list"}
+
+
+$ curl /no-such-endpoint
+  -> HTTP 404  {"error":"Not Found","message":"no such endpoint: /no-such-endpoint"}
+
+
+$ curl -X POST /health   (wrong method)
+  -> HTTP 405  {"error":"Method Not Allowed","message":"POST is not allowed on /health"}
+

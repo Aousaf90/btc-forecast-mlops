@@ -1,0 +1,1 @@
+{"changed":false,"loaded_at":"2026-11-20T10:53:04.783981+00:00","model_version":"20261120105214715","previous_version":"20261120105214715","status":"reloaded"}

@@ -1,0 +1,1 @@
+{"evaluation_window":{"days":7,"end":"2026-11-19","start":"2026-11-13"},"metrics":{"mae":6162.8007,"mape":9.5833,"rmse":6272.8235},"model_type":"prophet","model_version":"20261120105214715","threshold":{"mape_threshold":15.0,"passed":true},"train_rows":365,"train_window_days":365,"trained_at":"2026-11-20T10:52:14.715126+00:00"}

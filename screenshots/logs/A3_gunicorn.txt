@@ -1,0 +1,19 @@
+[2026-11-20 15:52:33 +0500] [5141] [INFO] Starting gunicorn 22.0.0
+[2026-11-20 15:52:33 +0500] [5141] [INFO] Listening at: http://0.0.0.0:5000 (5141)
+[2026-11-20 15:52:33 +0500] [5141] [INFO] Using worker: sync
+[2026-11-20 15:52:33 +0500] [5146] [INFO] Booting worker with pid: 5146
+[2026-11-20 15:52:33 +0500] [5154] [INFO] Booting worker with pid: 5154
+Importing plotly failed. Interactive plots will not work.
+2026-11-20 15:52:34,245 [INFO] api: Loaded model version 20261120105214715 from /home/talha/Desktop/Aousaf-Assignment/models/prophet_model.json
+Importing plotly failed. Interactive plots will not work.
+2026-11-20 15:52:34,314 [INFO] api: Loaded model version 20261120105214715 from /home/talha/Desktop/Aousaf-Assignment/models/prophet_model.json
+2026-11-20 15:53:04,784 [INFO] api: Loaded model version 20261120105214715 from /home/talha/Desktop/Aousaf-Assignment/models/prophet_model.json
+2026-11-20 15:53:04,810 [WARNING] api: 400 on /predict: forecast_days must be between 1 and 90, got -1
+2026-11-20 15:53:04,817 [WARNING] api: 400 on /predict: forecast_days must be a number, got str
+2026-11-20 15:53:04,824 [WARNING] api: 400 on /predict: forecast_days cannot be null
+2026-11-20 15:53:04,833 [WARNING] api: 400 on /predict: request body is not valid JSON; send a JSON object or an empty body
+2026-11-20 15:53:04,840 [WARNING] api: 400 on /predict: request body must be a JSON object, got list
+[2026-11-20 15:53:04 +0500] [5141] [INFO] Handling signal: term
+[2026-11-20 15:53:04 +0500] [5146] [INFO] Worker exiting (pid: 5146)
+[2026-11-20 15:53:04 +0500] [5154] [INFO] Worker exiting (pid: 5154)
+[2026-11-20 15:53:05 +0500] [5141] [INFO] Shutting down: Master
