@@ -1,0 +1,163 @@
+# ---------------------------------------------------------------------------
+# Local integration environment (B2): the Flask prediction API alongside
+# Airflow and Postgres, sharing the model artifacts through a named volume.
+#
+#   docker compose up -d --build
+#   Airflow UI  http://localhost:8080   (airflow / airflow)
+#   Flask API   http://localhost:5000
+#
+# IMPORTANT: this stack and Minikube must not run at the same time -- together
+# they exceed the available RAM. Run `docker compose down` before starting the
+# cluster for Part D.
+#
+# The `models` volume is the compose-local stand-in for the Kubernetes PVC: the
+# Airflow container trains and writes the Prophet artifact, the API container
+# mounts the same volume read-only and reloads from it when the DAG calls
+# POST /reload. That is the same write/read split the cluster has, so the
+# handoff is exercised locally before it is deployed.
+# ---------------------------------------------------------------------------
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: airflow/Dockerfile
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+    # Consumed by the DAG, mirroring the Kubernetes ConfigMap keys.
+    DATA_DIR: /opt/airflow/data
+    MODEL_DIR: /opt/airflow/models
+    PREDICTION_API_URL: http://api:5000
+    MAPE_THRESHOLD: "15.0"
+    TRAIN_WINDOW_DAYS: "365"
+    PYTHONPATH: /opt/airflow/project
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./src:/opt/airflow/project/src
+    - ./logs:/opt/airflow/logs
+    - models:/opt/airflow/models
+    - data:/opt/airflow/data
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  # ---------------------------------------------------------------- Postgres
+  postgres:
+    image: postgres:15-alpine
+    container_name: btc-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # -------------------------------------------------------- Flask prediction
+  api:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: aousafs/btc-forecast-api:latest
+    container_name: btc-api
+    ports:
+      - "5000:5000"
+    environment:
+      MODEL_DIR: /app/models
+      DATA_DIR: /app/data
+      MODEL_STAGE: development
+      LOG_LEVEL: INFO
+      PORT: "5000"
+    volumes:
+      # Read-only: only the Airflow retrain task may write the artifact.
+      - models:/app/models:ro
+      - data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # ------------------------------------------------------- Airflow bootstrap
+  # Runs once: migrates the metadata DB and creates the admin user, then exits.
+  # The scheduler and webserver wait for it to finish successfully.
+  airflow-init:
+    <<: *airflow-common
+    container_name: btc-airflow-init
+    # Runs as root ONLY for this one-shot container, so it can take ownership
+    # of the named volumes. Docker creates named volumes owned by root, but the
+    # Airflow images run as uid 50000 -- without this chown the DAG's fetch task
+    # fails with "PermissionError: /opt/airflow/data/raw". The scheduler and
+    # webserver still run unprivileged as the default airflow user.
+    user: "0:0"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+        mkdir -p /opt/airflow/models /opt/airflow/data /opt/airflow/logs
+        # Strict on the named volumes: the DAG must be able to write artifacts.
+        chown -R 50000:0 /opt/airflow/models /opt/airflow/data
+        # Best-effort on ./logs: it is a host bind mount, and chown -R trips on
+        # Airflow's "scheduler/latest" symlink with "Operation not permitted".
+        # A failure here is cosmetic -- task logs are still readable in the UI.
+        chown -Rh 50000:0 /opt/airflow/logs 2>/dev/null || true
+        chmod -R a+rwX /opt/airflow/logs 2>/dev/null || true
+        echo "volume ownership set to airflow (uid 50000)"
+        su airflow -c "airflow db migrate"
+        su airflow -c "airflow users create \
+          --username '${AIRFLOW_ADMIN_USER:-airflow}' \
+          --password '${AIRFLOW_ADMIN_PASSWORD:-airflow}' \
+          --firstname Admin --lastname User \
+          --role Admin --email admin@example.com" || true
+        echo "airflow-init complete"
+    restart: on-failure
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: btc-airflow-scheduler
+    command: scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: btc-airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-db:
+  # Shared artifact store: written by Airflow, read by the API. Stands in for
+  # the Kubernetes PVC that k8s/pvc.yaml mounts at /app/models.
+  models:
+  data:
