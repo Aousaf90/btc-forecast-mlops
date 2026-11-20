@@ -1,11 +1,17 @@
 # ---------------------------------------------------------------------------
-# Core runtime requirements.
+# SHARED core requirements: the data and modelling stack only.
 #
-# These exact pins are shared by BOTH the Flask API image (app/Dockerfile) and
-# the Airflow image (docker-compose.yml). The Airflow container WRITES the
-# Prophet model JSON that the Flask container READS, so a prophet version drift
-# between the two images breaks the /reload endpoint. Do not bump prophet in
-# one place only.
+# Installed by BOTH the Flask API image (app/Dockerfile) and the Airflow image
+# (airflow/Dockerfile). The Airflow container WRITES the Prophet model JSON
+# that the Flask container READS, so a prophet version drift between the two
+# breaks POST /reload at runtime. Keeping prophet pinned in this one shared
+# file is what prevents that.
+#
+# DELIBERATELY NOT HERE: Flask and gunicorn. They live in requirements-api.txt.
+# Airflow 2.10 pins its own Flask (2.2.x) because flask-appbuilder imports
+# flask._app_ctx_stack, which Flask removed in 2.3. Installing Flask 3.x into
+# the Airflow image crash-loops the scheduler with an ImportError, so the web
+# stack must not be part of the shared set.
 # ---------------------------------------------------------------------------
 
 # --- Forecasting model ---
@@ -21,14 +27,17 @@ holidays==0.57
 # yfinance/pandas paths are only validated against the 1.x ABI.
 numpy==1.26.4
 pandas==2.2.3
-scikit-learn==1.5.2
+
+# NOTE: scikit-learn is deliberately NOT a dependency. The MAE/RMSE/MAPE
+# calculations in src/train_forecast.py are plain numpy, and prophet itself
+# does not require scipy. Including scikit-learn pulled in sklearn (56 MB) and
+# scipy (111 MB) for no runtime benefit -- 167 MB of a Prophet image that is
+# already large. See the image-size section of the report.
 
 # --- Data source ---
 # yfinance rate-limits and intermittently returns empty frames; src/etl_fetch.py
 # wraps it in retry + raw CSV caching.
 yfinance==0.2.51
 
-# --- API ---
-Flask==3.0.3
-gunicorn==22.0.0
+# --- HTTP client (used by the ETL providers and the DAG's reload task) ---
 requests==2.32.3

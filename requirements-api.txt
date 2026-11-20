@@ -1,0 +1,12 @@
+# ---------------------------------------------------------------------------
+# Flask API image requirements (app/Dockerfile only).
+#
+# The shared modelling stack plus the web serving layer. Kept separate from
+# requirements.txt so that the Airflow image can install the same pinned
+# prophet WITHOUT dragging in a Flask version that breaks Airflow's own
+# flask-appbuilder dependency.
+# ---------------------------------------------------------------------------
+-r requirements.txt
+
+Flask==3.0.3
+gunicorn==22.0.0

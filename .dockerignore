@@ -1,0 +1,31 @@
+# Keep the build context small: a large context slows every build and busts
+# the layer cache on unrelated changes.
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Model artifacts and market data live on the PVC, never baked into the image.
+models/
+data/
+logs/
+
+.git/
+.github/
+.gitignore
+screenshots/
+reports/
+docs/
+*.pdf
+*.md
+
+# Other services' build inputs
+k8s/
+dags/
+kubeflow/
+docker-compose.yml

@@ -1,5 +1,5 @@
 # Development / CI-only requirements. NOT installed into the production API image.
--r requirements.txt
+-r requirements-api.txt
 
 # --- Testing ---
 pytest==8.3.3
