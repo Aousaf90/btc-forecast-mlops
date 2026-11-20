@@ -1,0 +1,20 @@
+=== C1: Airflow DAG run (manual_1795194716) ===
+dag_id           | fileloc                               | owners | is_paused
+btc_etl_pipeline | /opt/airflow/dags/btc_etl_pipeline.py | mlops  | False    
+
+<Task(PythonOperator): fetch_btc_data>
+    <Task(PythonOperator): preprocess_features>
+        <Task(PythonOperator): retrain_and_evaluate>
+            <Task(PythonOperator): trigger_model_reload>
+
+dag_id           | run_id                               | state   | execution_date            | start_date                       | end_date                        
+=================+======================================+=========+===========================+==================================+=================================
+btc_etl_pipeline | manual_1795194716                    | success | 2026-11-20T17:12:02+00:00 | 2026-11-20T17:12:59.377423+00:00 | 2026-11-20T17:14:07.133051+00:00
+btc_etl_pipeline | scheduled__2026-11-19T00:00:00+00:00 | success | 2026-11-19T00:00:00+00:00 | 2026-11-20T17:11:56.437085+00:00 | 2026-11-20T17:12:58.902686+00:00
+                                                                                                                                                                   
+
+=== per-task final state ===
+fetch_btc_data             success
+preprocess_features        success
+retrain_and_evaluate       success
+trigger_model_reload       success
