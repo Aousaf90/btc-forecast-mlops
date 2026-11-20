@@ -1,0 +1,58 @@
+# ---- Model artifacts & data: NEVER commit. These live on the K8s PVC. ----
+models/
+data/
+*.json.model
+*.pkl
+*.joblib
+*.csv
+!tests/fixtures/*.csv
+!reports/*.csv
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+ENV/
+
+# ---- Testing / linting ----
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Prophet / cmdstanpy build noise ----
+*.stan
+*.hpp
+cmdstan-*/
+httpstan/
+
+# ---- Airflow ----
+airflow.db
+airflow-webserver.pid
+airflow.cfg
+standalone_admin_password.txt
+# Root-scoped: Airflow writes ./logs at the repo root. An unanchored "logs/"
+# would also swallow screenshots/logs/, which holds graded Part E evidence.
+/logs/
+
+# ---- Reports: keep the PDF, drop the scratch ----
+reports/*.aux
+reports/*.log
+reports/*.out
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+*.swp
