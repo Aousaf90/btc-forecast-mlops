@@ -1,0 +1,4 @@
+{"model_loaded":true,"model_loaded_at":"2026-11-24T10:18:03.108202+00:00","model_stage":"production","model_version":"20261124101746933","status":"ok","timestamp":"2026-11-24T10:18:42.624771+00:00","uptime_seconds":121.8}
+All commands and output from this session will be recorded in container logs, including credentials and sensitive information passed through the command prompt.
+If you don't see a command prompt, try pressing enter.
+pod "ingress-curl" deleted from default namespace

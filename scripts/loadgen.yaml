@@ -1,0 +1,59 @@
+# Ephemeral load generator for the HPA demo (Part D5). Not a graded manifest.
+# Apply only while capturing `kubectl get hpa --watch`; delete afterwards.
+#
+#   kubectl apply -f scripts/loadgen.yaml
+#   kubectl get hpa btc-forecast-hpa --watch
+#   kubectl delete -f scripts/loadgen.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: btc-forecast-loadgen
+  labels:
+    app: loadgen
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      containers:
+        - name: loadgen
+          image: aousafs/btc-forecast-api:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-c"]
+          args:
+            - |
+              import json, time, urllib.request
+              from concurrent.futures import ThreadPoolExecutor, as_completed
+              url = "http://btc-forecast-api/predict"
+              body = json.dumps({"forecast_days": 7}).encode()
+              def hit(_):
+                  req = urllib.request.Request(
+                      url, data=body,
+                      headers={"Content-Type": "application/json"},
+                      method="POST",
+                  )
+                  try:
+                      urllib.request.urlopen(req, timeout=30).read()
+                  except Exception:
+                      time.sleep(0.05)
+              while True:
+                  with ThreadPoolExecutor(max_workers=12) as pool:
+                      futs = [pool.submit(hit, i) for i in range(48)]
+                      for _ in as_completed(futs):
+                          pass
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false

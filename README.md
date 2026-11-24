@@ -11,7 +11,7 @@ Kubeflow, and deployed on Kubernetes with autoscaling.
 | **Docker image** | [`aousafs/btc-forecast-api`](https://hub.docker.com/r/aousafs/btc-forecast-api) |
 | **Model** | Facebook Prophet 1.1.6 |
 | **Forecast horizon** | 7 days |
-| **Current hold-out accuracy** | MAE $6,162.80 · RMSE $6,272.82 · **MAPE 9.58%** |
+| **Current hold-out accuracy** | MAE $5,192.55 · RMSE $5,343.90 · **MAPE 8.48%** (cluster, 2026-11-24) |
 | **Rolling backtest (12 windows)** | mean MAPE **3.49%** (best 0.92%, worst 9.58%) |
 
 ---
@@ -64,7 +64,7 @@ Kubeflow, and deployed on Kubernetes with autoscaling.
 | `airflow/Dockerfile` | Airflow worker image (same pinned Prophet as the API) |
 | `docker-compose.yml` | Local stack: Flask + Airflow + Postgres |
 | `tests/` | 85 pytest tests (46 API, 39 pipeline) |
-| `k8s/` | Kubernetes manifests — **not yet written (Part D)** |
+| `k8s/` | Kubernetes manifests (ConfigMap/Secret, PVC, Deployment, Service, HPA, Ingress, train Job) |
 
 **Not in git** (by design): `models/`, `data/`, `venv/`, `logs/`. Model artifacts and
 market data live on the Kubernetes PVC, never in the repository.
@@ -143,6 +143,51 @@ docker compose down          # ⚠️ required before starting Minikube — see 
 ```bash
 ./venv/bin/python kubeflow/btc_kfp_pipeline.py
 ```
+
+### Kubernetes (Minikube)
+
+macOS AirPlay binds port 5000 — port-forward the Service to **8500**. Do not run compose and Minikube at the same time.
+
+```bash
+docker compose down
+minikube start --driver=docker --memory=2800 --cpus=3
+minikube addons enable metrics-server
+minikube addons enable ingress
+
+# On Apple Silicon, load a locally built image (Hub image is amd64 from GitHub Actions):
+docker build -t aousafs/btc-forecast-api:latest -f app/Dockerfile .
+minikube image load aousafs/btc-forecast-api:latest
+
+kubectl apply -f k8s/configmap-secret.yaml -f k8s/pvc.yaml \
+  -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/hpa.yaml -f k8s/ingress.yaml
+kubectl rollout status deploy/btc-forecast-api
+
+# Seed the PVC with a trained model, then query the API
+kubectl apply -f k8s/train-job.yaml
+kubectl wait --for=condition=complete job/btc-forecast-train --timeout=300s
+
+kubectl port-forward svc/btc-forecast-api 8500:80
+# other terminal:
+curl -s localhost:8500/health
+curl -s -X POST localhost:8500/predict -H 'Content-Type: application/json' -d '{}'
+```
+
+HPA load demo (scales 2 → 8):
+
+```bash
+kubectl apply -f scripts/loadgen.yaml
+kubectl get hpa btc-forecast-hpa --watch    # wait until REPLICAS=8
+kubectl delete -f scripts/loadgen.yaml
+```
+
+Self-healing:
+
+```bash
+kubectl delete pod -l app=btc-forecast-api --field-selector=status.phase=Running
+kubectl get pods -l app=btc-forecast-api -w
+```
+
+The technical report is `reports/Assignment3_Technical_Report.pdf`.
 
 ---
 
@@ -228,8 +273,8 @@ failure and fails over to Binance, which supplies full daily OHLCV with no API k
 | **A** | Flask REST API + pytest | 10 | ✅ Complete — 85 tests passing |
 | **B** | Docker + CI/CD | 10 | ✅ Complete — image published, CI green |
 | **C** | Airflow DAG + Kubeflow | 12 | ✅ Complete — DAG run verified, spec compiled |
-| **D** | Kubernetes deployment | 18 | ⬜ Not started |
-| **E** | Verification + report | 10 | ⬜ Not started |
+| **D** | Kubernetes deployment | 18 | ✅ Complete — 3-replica deploy, HPA 2→8 @ 251% CPU, Ingress |
+| **E** | Verification + report | 10 | ✅ Complete — self-heal, live `/predict`, PDF report |
 
 See [`HANDOFF.md`](HANDOFF.md) for detailed state, decisions and next steps.
 

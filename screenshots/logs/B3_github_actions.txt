@@ -1,0 +1,10 @@
+# GitHub Actions runs (https://github.com/Aousaf90/btc-forecast-mlops/actions)
+
+completed    success     e8bdb9d  docs: add README and handoff guide for continuing on another machine
+             https://github.com/Aousaf90/btc-forecast-mlops/actions/runs/44799899698
+completed    success     75c758b  ci: lint dags/ and kubeflow/ now that they contain code
+             https://github.com/Aousaf90/btc-forecast-mlops/actions/runs/44788505073
+completed    success     8a593e0  style: apply black formatting to the API and test suite
+             https://github.com/Aousaf90/btc-forecast-mlops/actions/runs/44766434334
+completed    cancelled   4abcebf  docs: record the Docker image size tradeoff
+             https://github.com/Aousaf90/btc-forecast-mlops/actions/runs/44766411485

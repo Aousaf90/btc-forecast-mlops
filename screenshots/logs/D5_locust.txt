@@ -1,0 +1,31 @@
+[2026-11-24 15:20:48,572] Aousafs-MacBook-Air/INFO/locust.main: Starting Locust 2.32.4
+[2026-11-24 15:20:48,585] Aousafs-MacBook-Air/INFO/locust.main: Run time limit set to 180 seconds
+[2026-11-24 15:20:48,586] Aousafs-MacBook-Air/INFO/locust.runners: Ramping to 16 users at a rate of 4.00 per second
+[2026-11-24 15:20:51,593] Aousafs-MacBook-Air/INFO/locust.runners: All users spawned: {"ForecastUser": 16} (16 total users)
+[2026-11-24 15:23:48,270] Aousafs-MacBook-Air/INFO/locust.main: --run-time limit reached, shutting down
+[2026-11-24 15:23:48,329] Aousafs-MacBook-Air/INFO/locust.main: Shutting down (exit code 1)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      /health                                                                         5631 5631(100.00%) |      1       0     103      1 |   31.34       31.34
+GET      /metrics                                                                        2704 2704(100.00%) |      1       0      80      1 |   15.05       15.05
+POST     /predict                                                                       13958 13958(100.00%) |      1       0     105      1 |   77.69       77.69
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                     22293 22293(100.00%) |      1       0     105      1 |  124.07      124.07
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      /health                                                                                 1      1      2      2      2      3      4      7     36    100    100   5631
+GET      /metrics                                                                                1      1      2      2      2      3      4      6     37     80     80   2704
+POST     /predict                                                                                1      1      2      2      2      3      5      7     38     83    110  13958
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                              1      1      2      2      2      3      4      7     36     83    110  22293
+
+Error report
+# occurrences      Error                                                                                               
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+13958              POST /predict: ConnectionRefusedError(61, 'Connection refused')                                     
+5631               GET /health: ConnectionRefusedError(61, 'Connection refused')                                       
+2704               GET /metrics: ConnectionRefusedError(61, 'Connection refused')                                      
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+

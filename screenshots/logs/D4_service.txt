@@ -1,0 +1,40 @@
+NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE    SELECTOR
+btc-forecast-api            ClusterIP   10.100.205.72    <none>        80/TCP         110s   app=btc-forecast-api
+btc-forecast-api-nodeport   NodePort    10.105.223.232   <none>        80:30080/TCP   110s   app=btc-forecast-api
+---
+Name:                     btc-forecast-api
+Namespace:                default
+Labels:                   app=btc-forecast-api
+                          app.kubernetes.io/part-of=btc-forecast-mlops
+Annotations:              <none>
+Selector:                 app=btc-forecast-api
+Type:                     ClusterIP
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.100.205.72
+IPs:                      10.100.205.72
+Port:                     http  80/TCP
+TargetPort:               5000/TCP
+Endpoints:                10.244.0.7:5000,10.244.0.8:5000,10.244.0.9:5000
+Session Affinity:         None
+Internal Traffic Policy:  Cluster
+
+
+Name:                     btc-forecast-api-nodeport
+Namespace:                default
+Labels:                   app=btc-forecast-api
+                          app.kubernetes.io/part-of=btc-forecast-mlops
+Annotations:              <none>
+Selector:                 app=btc-forecast-api
+Type:                     NodePort
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.105.223.232
+IPs:                      10.105.223.232
+Port:                     http  80/TCP
+TargetPort:               5000/TCP
+NodePort:                 http  30080/TCP
+Endpoints:                10.244.0.7:5000,10.244.0.8:5000,10.244.0.9:5000
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Internal Traffic Policy:  Cluster

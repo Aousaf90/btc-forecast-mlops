@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# D5. Horizontal Pod Autoscaler.
+#
+# minReplicas: 2, maxReplicas: 8, CPU target 60% — the graded numbers.
+# The Deployment starts at 3 replicas; with idle CPU the HPA will scale it
+# down to 2. Load tests (scripts/locustfile.py) drive it back up.
+#
+# Requires the metrics-server addon: `minikube addons enable metrics-server`.
+# ---------------------------------------------------------------------------
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: btc-forecast-hpa
+  labels:
+    app: btc-forecast-api
+    app.kubernetes.io/part-of: btc-forecast-mlops
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: btc-forecast-api
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30

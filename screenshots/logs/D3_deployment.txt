@@ -1,0 +1,53 @@
+Name:                   btc-forecast-api
+Namespace:              default
+CreationTimestamp:      Tue, 24 Nov 2026 15:16:37 +0500
+Labels:                 app=btc-forecast-api
+                        app.kubernetes.io/part-of=btc-forecast-mlops
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=btc-forecast-api
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  1 max unavailable, 1 max surge
+Pod Template:
+  Labels:  app=btc-forecast-api
+           app.kubernetes.io/part-of=btc-forecast-mlops
+  Containers:
+   api:
+    Image:      aousafs/btc-forecast-api:latest
+    Port:       5000/TCP (http)
+    Host Port:  0/TCP (http)
+    Limits:
+      cpu:     500m
+      memory:  512Mi
+    Requests:
+      cpu:      100m
+      memory:   128Mi
+    Liveness:   http-get http://:http/health delay=15s timeout=3s period=10s successThreshold=1 failureThreshold=3
+    Readiness:  http-get http://:http/health delay=10s timeout=3s period=5s successThreshold=1 failureThreshold=3
+    Environment Variables from:
+      btc-forecast-config  ConfigMap  Optional: false
+      btc-forecast-secret  Secret     Optional: false
+    Environment:
+      MODEL_DIR:  /app/models
+      DATA_DIR:   /app/models/data
+    Mounts:
+      /app/models from model-storage (rw)
+  Volumes:
+   model-storage:
+    Type:          PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:     btc-forecast-pvc
+    ReadOnly:      false
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   btc-forecast-api-6ffb984749 (3/3 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  110s  deployment-controller  Scaled up replica set btc-forecast-api-6ffb984749 from 0 to 3

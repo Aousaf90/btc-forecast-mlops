@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# D2. PersistentVolumeClaim — model artifacts and historical data survive
+# pod restarts. Mounted at /app/models (see k8s/deployment.yaml), matching
+# MODEL_DIR in the API image.
+#
+# ReadWriteOnce is the access mode minikube's default StorageClass (hostpath /
+# docker) actually provisions. Minikube is a single node, so every replica of
+# the Deployment can still share the volume.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: btc-forecast-pvc
+  labels:
+    app: btc-forecast-api
+    app.kubernetes.io/part-of: btc-forecast-mlops
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

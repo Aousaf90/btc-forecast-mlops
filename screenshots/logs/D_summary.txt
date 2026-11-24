@@ -1,0 +1,24 @@
+$ kubectl get pods,svc,hpa,ingress,pvc
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/btc-forecast-api-6ffb984749-4b4bp   1/1     Running   0          5m47s
+pod/btc-forecast-api-6ffb984749-c5tdp   1/1     Running   0          11m
+pod/btc-forecast-api-6ffb984749-h49jt   1/1     Running   0          5m47s
+pod/btc-forecast-api-6ffb984749-p5449   1/1     Running   0          5m47s
+
+NAME                                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+service/btc-forecast-api            ClusterIP   10.100.205.72    <none>        80/TCP         11m
+service/btc-forecast-api-nodeport   NodePort    10.105.223.232   <none>        80:30080/TCP   11m
+service/kubernetes                  ClusterIP   10.96.0.1        <none>        443/TCP        14m
+
+NAME                                                   REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/btc-forecast-hpa   Deployment/btc-forecast-api   cpu: 6%/60%   2         8         4          11m
+
+NAME                                             CLASS   HOSTS                ADDRESS        PORTS   AGE
+ingress.networking.k8s.io/btc-forecast-ingress   nginx   btc-forecast.local   192.168.49.2   80      11m
+
+NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/btc-forecast-pvc   Bound    pvc-c2bb81c3-d014-411d-bdb8-5e7f03e94753   2Gi        RWO            standard       <unset>                 11m
+
+$ kubectl get deploy btc-forecast-api -o wide
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                            SELECTOR
+btc-forecast-api   4/4     4            4           11m   api          aousafs/btc-forecast-api:latest   app=btc-forecast-api

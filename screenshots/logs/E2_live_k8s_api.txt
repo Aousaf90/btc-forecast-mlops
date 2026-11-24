@@ -1,0 +1,85 @@
+$ curl -s localhost:8500/health | python3 -m json.tool
+{
+    "model_loaded": true,
+    "model_loaded_at": "2026-11-24T10:18:03.338589+00:00",
+    "model_stage": "production",
+    "model_version": "20261124101746933",
+    "status": "ok",
+    "timestamp": "2026-11-24T10:28:28.892039+00:00",
+    "uptime_seconds": 708.07
+}
+
+$ curl -s localhost:8500/metrics | python3 -m json.tool
+{
+    "evaluation_window": {
+        "days": 7,
+        "end": "2026-11-23",
+        "start": "2026-11-17"
+    },
+    "metrics": {
+        "mae": 5192.5504,
+        "mape": 8.482,
+        "rmse": 5343.8978
+    },
+    "model_type": "prophet",
+    "model_version": "20261124101746933",
+    "threshold": {
+        "mape_threshold": 15.0,
+        "passed": true
+    },
+    "train_rows": 365,
+    "train_window_days": 365,
+    "trained_at": "2026-11-24T10:17:46.933705+00:00"
+}
+
+$ curl -s -X POST localhost:8500/predict ... | python3 -m json.tool
+{
+    "forecast_days": 7,
+    "generated_at": "2026-11-24T10:28:28.992873+00:00",
+    "model_version": "20261124101746933",
+    "predictions": [
+        {
+            "date": "2026-11-24",
+            "lower_bound": 55801.43,
+            "predicted_close": 60311.41,
+            "upper_bound": 64752.07
+        },
+        {
+            "date": "2026-11-25",
+            "lower_bound": 55972.84,
+            "predicted_close": 59918.48,
+            "upper_bound": 64185.55
+        },
+        {
+            "date": "2026-11-26",
+            "lower_bound": 54901.31,
+            "predicted_close": 59131.91,
+            "upper_bound": 63093.99
+        },
+        {
+            "date": "2026-11-27",
+            "lower_bound": 54469.38,
+            "predicted_close": 58860.07,
+            "upper_bound": 62891.4
+        },
+        {
+            "date": "2026-11-28",
+            "lower_bound": 54138.15,
+            "predicted_close": 58547.36,
+            "upper_bound": 62781.85
+        },
+        {
+            "date": "2026-11-29",
+            "lower_bound": 54067.21,
+            "predicted_close": 58356.2,
+            "upper_bound": 62833.23
+        },
+        {
+            "date": "2026-11-30",
+            "lower_bound": 54141.18,
+            "predicted_close": 58359.37,
+            "upper_bound": 62112.32
+        }
+    ],
+    "source": "registered_model"
+}

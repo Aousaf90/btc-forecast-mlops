@@ -1,0 +1,46 @@
+$ kubectl get hpa btc-forecast-hpa
+NAME               REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+btc-forecast-hpa   Deployment/btc-forecast-api   cpu: 6%/60%   2         8         4          11m
+
+$ kubectl describe hpa btc-forecast-hpa | sed -n '/Metrics:/,/Events:/p'
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  6% (6m) / 60%
+Min replicas:                                          2
+Max replicas:                                          8
+Behavior:
+  Scale Up:
+    Stabilization Window: 0 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Pods     Value: 4    Period: 15 seconds
+      - Type: Percent  Value: 100  Period: 15 seconds
+  Scale Down:
+    Stabilization Window: 60 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Pods  Value: 1  Period: 30 seconds
+Deployment pods:    4 current / 4 desired
+Conditions:
+  Type            Status  Reason            Message
+  ----            ------  ------            -------
+  AbleToScale     True    ReadyForNewScale  recommended size matches current size
+  ScalingActive   True    ValidMetricFound  the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  True    ScaleDownLimit    the desired replica count is decreasing faster than the maximum scale rate
+  ScaledToZero    False   NotScaledToZero   the HPA controller did not scale the workload to zero
+Events:
+
+$ kubectl describe hpa btc-forecast-hpa | sed -n '/Events:/,'
+Events:
+  Type     Reason                        Age                From                       Message
+  ----     ------                        ----               ----                       -------
+  Warning  FailedGetResourceMetric       11m (x4 over 11m)  horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedComputeMetricsReplicas  11m (x4 over 11m)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedGetResourceMetric       10m (x4 over 10m)  horizontal-pod-autoscaler  failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Warning  FailedComputeMetricsReplicas  10m (x4 over 10m)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Normal   SuccessfulRescale             9m48s              horizontal-pod-autoscaler  New size: 2; reason: All metrics below target
+  Normal   SuccessfulRescale             5m47s              horizontal-pod-autoscaler  New size: 6; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             5m31s              horizontal-pod-autoscaler  New size: 8; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             119s               horizontal-pod-autoscaler  New size: 7; reason: All metrics below target
+  Normal   SuccessfulRescale             89s                horizontal-pod-autoscaler  New size: 6; reason: All metrics below target
+  Normal   SuccessfulRescale             59s                horizontal-pod-autoscaler  New size: 5; reason: All metrics below target
+  Normal   SuccessfulRescale             29s                horizontal-pod-autoscaler  New size: 4; reason: All metrics below target

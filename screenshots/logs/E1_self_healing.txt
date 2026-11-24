@@ -1,0 +1,29 @@
+# steady state before delete
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+btc-forecast-api   2/2     2            2           3m8s
+NAME                                READY   STATUS    RESTARTS   AGE    IP           NODE       NOMINATED NODE   READINESS GATES
+btc-forecast-api-6ffb984749-2wk6f   1/1     Running   0          3m8s   10.244.0.9   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-c5tdp   1/1     Running   0          3m8s   10.244.0.7   minikube   <none>           <none>
+NAME               REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+btc-forecast-hpa   Deployment/btc-forecast-api   cpu: 4%/60%   2         8         2          3m8s
+
+# kubectl delete pod btc-forecast-api-6ffb984749-2wk6f   (10:19:45Z)
+pod "btc-forecast-api-6ffb984749-2wk6f" deleted from default namespace
+
+# ReplicaSet immediately schedules a replacement
+NAME                                READY   STATUS    RESTARTS   AGE     IP            NODE       NOMINATED NODE   READINESS GATES
+btc-forecast-api-6ffb984749-c5tdp   1/1     Running   0          3m10s   10.244.0.7    minikube   <none>           <none>
+btc-forecast-api-6ffb984749-lms4m   0/1     Running   0          2s      10.244.0.13   minikube   <none>           <none>
+
+# wait for Ready
+pod/btc-forecast-api-6ffb984749-c5tdp condition met
+pod/btc-forecast-api-6ffb984749-lms4m condition met
+
+# after self-heal
+NAME                                READY   STATUS    RESTARTS   AGE     IP            NODE       NOMINATED NODE   READINESS GATES
+btc-forecast-api-6ffb984749-c5tdp   1/1     Running   0          3m19s   10.244.0.7    minikube   <none>           <none>
+btc-forecast-api-6ffb984749-lms4m   1/1     Running   0          11s     10.244.0.13   minikube   <none>           <none>
+NAME                          DESIRED   CURRENT   READY   AGE
+btc-forecast-api-6ffb984749   2         2         2       3m19s
+NAME               REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+btc-forecast-hpa   Deployment/btc-forecast-api   cpu: 4%/60%   2         8         2          3m19s

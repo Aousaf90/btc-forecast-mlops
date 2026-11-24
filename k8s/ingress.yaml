@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------------------
+# D6. Ingress — NGINX routes host btc-forecast.local to the ClusterIP Service.
+#
+# Requires: `minikube addons enable ingress`
+# Host mapping (once, with sudo):
+#   echo "$(minikube ip) btc-forecast.local" | sudo tee -a /etc/hosts
+#
+# On Docker-Desktop / Mac the minikube IP is often not reachable from the
+# host; `minikube tunnel` (or kubectl port-forward) is the workaround. The
+# Ingress object itself is still the graded artifact.
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: btc-forecast-ingress
+  labels:
+    app: btc-forecast-api
+    app.kubernetes.io/part-of: btc-forecast-mlops
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: btc-forecast.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: btc-forecast-api
+                port:
+                  number: 80

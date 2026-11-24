@@ -5,9 +5,10 @@ a different machine so work can continue without re-deriving context. It records
 what exists, what has actually been *verified* versus merely written, the decisions
 that are locked, the traps already hit, and exactly what comes next.
 
-**Last updated:** 2026-11-21, after Part C.
+**Last updated:** 2026-11-24, after Parts D and E (Minikube on Apple Silicon).
 **Repository:** https://github.com/Aousaf90/btc-forecast-mlops
 **Docker image:** `aousafs/btc-forecast-api` (tags: `latest`, `sha-<commit>`)
+**Report:** `reports/Assignment3_Technical_Report.pdf` (5 pages)
 
 > Read `README.md` first for the architecture, project structure and API reference.
 > This file covers state and intent, not documentation.
@@ -29,8 +30,8 @@ the mark allocations and exact numeric requirements are graded literally.
 | A | Flask REST API + pytest | 10 | ✅ Complete, verified |
 | B | Docker + CI/CD | 10 | ✅ Complete, verified |
 | C | Airflow DAG + Kubeflow | 12 | ✅ Complete, verified |
-| D | Kubernetes deployment | 18 | ⬜ **Next** |
-| E | Verification + 4–6 page PDF report | 10 | ⬜ Not started |
+| D | Kubernetes deployment | 18 | ✅ Complete, verified on Minikube |
+| E | Verification + 4–6 page PDF report | 10 | ✅ Complete |
 
 ---
 
@@ -98,6 +99,7 @@ the fix; this is the index.
 | 7 | KFP: `Artifacts must have both a schema_title and a schema_version` | `from __future__ import annotations` (PEP 563) stringifies annotations; the KFP compiler needs real objects | Omit that import in `kubeflow/btc_kfp_pipeline.py` |
 | 8 | `.gitignore` silently swallowed graded evidence | Unanchored `logs/` rule also matched `screenshots/logs/` | Root-scoped `/logs/` |
 | 9 | Shell dies mid-script, exit 144 | `pkill -f gunicorn` matched the wrapper shell's own command line | Kill by captured PID |
+| 10 | `curl localhost:5000` returns 403 with `Server: AirTunes` | macOS Control Center / AirPlay Receiver binds TCP/5000 | Port-forward to 8500, or disable AirPlay Receiver |
 
 ---
 
@@ -143,7 +145,59 @@ GitHub Secrets `DOCKER_USERNAME` / `DOCKER_PASSWORD` are already set on the repo
 
 ---
 
-## 7. NEXT: Part D — Kubernetes (18 marks, the heaviest section)
+## 7. Part D — Kubernetes (DONE, 2026-11-24)
+
+Verified on this Mac (Apple Silicon, Docker Desktop ~4 GB, Minikube `--memory=2800 --cpus=3`).
+
+The Hub image is **linux/amd64** (GitHub Actions). Minikube here is **linux/arm64**, so the image was rebuilt locally and loaded with `minikube image load`. Graders on amd64 Linux can pull `aousafs/btc-forecast-api:latest` as usual.
+
+macOS AirPlay owns TCP/5000 (AirTunes 403). Port-forward the Service to **8500**.
+
+### What was applied and observed
+
+| File | Observed |
+|---|---|
+| `k8s/configmap-secret.yaml` | ConfigMap + dummy-base64 Secret, both `envFrom` |
+| `k8s/pvc.yaml` | 2 Gi RWO Bound, mounted at `/app/models` |
+| `k8s/deployment.yaml` | Started at 3 replicas; probes and resource numbers as graded; uid 1000 |
+| `k8s/service.yaml` | ClusterIP + NodePort 30080, 80 → 5000 |
+| `k8s/hpa.yaml` | min 2 / max 8 / 60% CPU. Idle scaled 3→2; load scaled **2→6→8** at 251% CPU |
+| `k8s/ingress.yaml` | `btc-forecast.local` ADDRESS 192.168.49.2; in-cluster Host-header curl returned 200 |
+| `k8s/train-job.yaml` | Optional seed Job: Binance failover, MAPE 8.482% REGISTERED, `/reload` OK |
+
+Self-healing: deleted `…-2wk6f`; replacement `…-lms4m` Running at 2 s, Ready at 11 s.
+
+Live `/predict` from the Service returned the 7-day forecast (2026-11-24 … 11-30, ~$60.3k → ~$58.4k).
+
+Load demo: `scripts/loadgen.yaml` (not a graded manifest — do not leave it applied). Transcripts in `screenshots/logs/D*.txt` and `E*.txt`.
+
+### Commands (re-run)
+
+```bash
+docker compose down
+minikube start --driver=docker --memory=2800 --cpus=3
+minikube addons enable metrics-server
+minikube addons enable ingress
+
+# Apple Silicon only:
+docker build -t aousafs/btc-forecast-api:latest -f app/Dockerfile .
+minikube image load aousafs/btc-forecast-api:latest
+
+kubectl apply -f k8s/configmap-secret.yaml -f k8s/pvc.yaml \
+  -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/hpa.yaml -f k8s/ingress.yaml
+kubectl rollout status deploy/btc-forecast-api
+kubectl apply -f k8s/train-job.yaml
+kubectl wait --for=condition=complete job/btc-forecast-train --timeout=300s
+kubectl port-forward svc/btc-forecast-api 8500:80
+```
+
+### Still optional for a prettier report
+
+CLI transcripts are in the PDF. UI screenshots of the Airflow DAG graph and the GitHub Actions run are nice-to-have, not blocking: [Actions run](https://github.com/Aousaf90/btc-forecast-mlops/actions/runs/44799899698).
+
+---
+
+## 7b. Original Part D notes (kept for the graded numbers)
 
 ### Setup (run first, on the target machine)
 
@@ -187,14 +241,13 @@ kubectl get nodes
 `screenshots/logs/` holds committed text transcripts. `scripts/capture_part_a.sh`
 regenerates Part A evidence and scrubs `$HOME` from paths automatically.
 
-**Screenshots still needed:** Parts A–C captures (the CLI transcripts exist, but the
-report needs images of the Airflow DAG graph and the GitHub Actions run), then all of
-Part D and E.
+**Report:** `reports/Assignment3_Technical_Report.pdf` (5 pages) covers A–E with CLI
+transcripts, architecture, Prophet/image-size justification, `kubectl get
+pods/svc/hpa/ingress`, HPA 2→8, self-healing, and live `/predict`. Source HTML is
+`reports/Assignment3_Technical_Report.html` (reprint with Chrome headless).
 
-Report must cover A–E with: Docker build output, Airflow DAG graph, GitHub Actions
-runs, `kubectl get pods/svc/hpa/ingress`, load-test autoscaling output, sample
-predictions, an architecture diagram, and a section justifying the **Prophet choice
-and its image-size tradeoff** (913 MB → 513 MB; see `reports/image_size_comparison.md`).
+Optional nicer screenshots, not blocking: Airflow DAG graph in the UI, GitHub Actions
+run page. CLI evidence is in `screenshots/logs/`.
 
 ---
 

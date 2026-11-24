@@ -1,0 +1,94 @@
+=== fetch ===
+2026-11-24 10:16:57,840 [INFO] __main__: Fetching BTC-USD from yfinance (period=5y), attempt 1/3
+Failed to get ticker 'BTC-USD' reason: Expecting value: line 1 column 1 (char 0)
+
+1 Failed download:
+['BTC-USD']: JSONDecodeError('Expecting value: line 1 column 1 (char 0)')
+Failed to get ticker 'BTC-USD' reason: Expecting value: line 1 column 1 (char 0)
+$BTC-USD: possibly delisted; no price data found  (period=5y)
+2026-11-24 10:17:16,786 [WARNING] __main__: yfinance attempt 1 failed (yfinance returned an empty frame from both endpoints (Yahoo answers HTTP 429 when rate-limiting)); retrying in 2.5s
+2026-11-24 10:17:19,250 [INFO] __main__: Fetching BTC-USD from yfinance (period=5y), attempt 2/3
+Failed to get ticker 'BTC-USD' reason: Expecting value: line 1 column 1 (char 0)
+
+1 Failed download:
+['BTC-USD']: JSONDecodeError('Expecting value: line 1 column 1 (char 0)')
+Failed to get ticker 'BTC-USD' reason: Expecting value: line 1 column 1 (char 0)
+$BTC-USD: possibly delisted; no price data found  (period=5y)
+2026-11-24 10:17:27,294 [WARNING] __main__: yfinance attempt 2 failed (yfinance returned an empty frame from both endpoints (Yahoo answers HTTP 429 when rate-limiting)); retrying in 4.8s
+2026-11-24 10:17:32,111 [INFO] __main__: Fetching BTC-USD from yfinance (period=5y), attempt 3/3
+Failed to get ticker 'BTC-USD' reason: Expecting value: line 1 column 1 (char 0)
+
+1 Failed download:
+['BTC-USD']: JSONDecodeError('Expecting value: line 1 column 1 (char 0)')
+Failed to get ticker 'BTC-USD' reason: Expecting value: line 1 column 1 (char 0)
+$BTC-USD: possibly delisted; no price data found  (period=5y)
+2026-11-24 10:17:43,211 [WARNING] __main__: yfinance exhausted after 3 attempts (yfinance returned an empty frame from both endpoints (Yahoo answers HTTP 429 when rate-limiting)); failing over
+2026-11-24 10:17:43,211 [INFO] __main__: Fetching BTC-USD from binance (period=5y), attempt 1/3
+2026-11-24 10:17:44,163 [INFO] src.providers: binance: 1825 daily candles for BTCUSDT
+2026-11-24 10:17:44,205 [INFO] __main__: Dropping 1 partial candle(s) for 2026-11-24
+2026-11-24 10:17:44,205 [INFO] __main__: binance: 1824 rows, 2021-11-26 -> 2026-11-23
+2026-11-24 10:17:44,206 [INFO] __main__: Source for this run: binance
+2026-11-24 10:17:44,216 [INFO] __main__: Wrote 1824 rows to /app/models/data/raw/btc_usd_raw.csv
+
+Raw data written to /app/models/data/raw/btc_usd_raw.csv
+Rows: 1824  |  Range: 2021-11-26 -> 2026-11-23
+      Date     Open     High      Low    Close      Volume
+2026-11-19 63068.21 64080.80 61428.26 61986.73 19879.64030
+2026-11-20 61986.73 62639.52 57778.35 58951.51 38125.92587
+2026-11-21 58951.51 60996.00 55130.00 60215.77 48558.10097
+2026-11-22 60215.78 61669.99 58768.51 61271.08 20137.13078
+2026-11-23 61271.09 64603.12 60386.00 61270.93 27493.88421
+=== features ===
+2026-11-24 10:17:45,541 [INFO] __main__: Dropped 30 warm-up rows for the 30-day windows
+2026-11-24 10:17:45,560 [INFO] __main__: Wrote 1794 feature rows to /app/models/data/processed/btc_features.csv
+
+Features written to /app/models/data/processed/btc_features.csv
+Rows: 1794  |  Columns: ['ds', 'y', 'Open', 'High', 'Low', 'Volume', 'ma_7', 'ma_30', 'volatility_7', 'volatility_30', 'ma_ratio_7_30', 'pct_change_1d', 'log_return']
+        ds        y     Open     High      Low      Volume         ma_7        ma_30  volatility_7  volatility_30  ma_ratio_7_30  pct_change_1d  log_return
+2026-11-19 61986.73 63068.21 64080.80 61428.26 19879.64030 64671.460000 74873.549667      0.531909       0.436356       0.863742      -1.714794   -0.017297
+2026-11-20 58951.51 61986.73 62639.52 57778.35 38125.92587 63333.961429 74035.486000      0.547635       0.450538       0.855454      -4.896564   -0.050205
+2026-11-21 60215.77 58951.51 60996.00 55130.00 48558.10097 62771.928571 73328.808667      0.490599       0.458519       0.856034       2.144576    0.021219
+2026-11-22 61271.08 60215.78 61669.99 58768.51 20137.13078 62189.075714 72664.863667      0.486634       0.467838       0.855834       1.752548    0.017374
+2026-11-23 61270.93 61271.09 64603.12 60386.00 27493.88421 61673.084286 72010.956000      0.491195       0.468584       0.856440      -0.000245   -0.000002
+=== train ===
+Importing matplotlib failed. Plotting will not work.
+Importing plotly failed. Interactive plots will not work.
+2026-11-24 10:17:46,778 [INFO] __main__: Split: 365 train rows (2025-11-17 -> 2026-11-16), 7 test rows (2026-11-17 -> 2026-11-23)
+2026-11-24 10:17:46,778 [INFO] __main__: Fitting validation model on 365 rows...
+10:17:46 - cmdstanpy - INFO - Chain [1] start processing
+10:17:46 - cmdstanpy - INFO - Chain [1] done processing
+2026-11-24 10:17:46,933 [INFO] __main__: Hold-out metrics: MAE=5192.55 RMSE=5343.90 MAPE=8.482%
+2026-11-24 10:17:46,934 [INFO] __main__: Refitting on 365 rows (2025-11-24 -> 2026-11-23) for the production artifact...
+10:17:46 - cmdstanpy - INFO - Chain [1] start processing
+10:17:46 - cmdstanpy - INFO - Chain [1] done processing
+2026-11-24 10:17:46,997 [INFO] __main__: Saved model to /app/models/prophet_model.json (60.0 KB)
+2026-11-24 10:17:46,998 [INFO] __main__: Registered model version 20261124101746933
+
+====================================================================
+  MODEL VERSION : 20261124101746933
+  TRAIN WINDOW  : 2025-11-17 -> 2026-11-16 (365 rows)
+  TEST WINDOW   : 2026-11-17 -> 2026-11-23 (7 days held out)
+--------------------------------------------------------------------
+  MAE           : 5,192.55 USD
+  RMSE          : 5,343.90 USD
+  MAPE          : 8.482 %
+  THRESHOLD     : 15.00 % -> PASS
+  REGISTERED    : True
+====================================================================
+
+  7-DAY FORECAST (refit on full history)
+
+  DATE            PREDICTED    LOWER 95%    UPPER 95%
+  --------------------------------------------------
+  2026-11-24      60,311.41    55,883.74    64,350.58
+  2026-11-25      59,918.48    55,417.42    63,935.74
+  2026-11-26      59,131.91    55,035.75    63,788.59
+  2026-11-27      58,860.07    54,646.79    62,971.52
+  2026-11-28      58,547.36    54,470.94    62,961.26
+  2026-11-29      58,356.20    53,994.64    62,742.51
+  2026-11-30      58,359.37    54,182.29    62,493.32
+
+=== reload API ===
+{"changed":true,"loaded_at":"2026-11-24T10:17:47.215794+00:00","model_version":"20261124101746933","previous_version":null,"status":"reloaded"}
+
+reload OK

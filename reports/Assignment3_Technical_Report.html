@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Assignment 3 — Production MLOps Pipeline: BTC 7-Day Forecast</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm 16mm 15mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 10.4pt;
+    line-height: 1.38;
+    color: #1a1a1a;
+  }
+  h1 { font-size: 18pt; margin: 0 0 4pt; letter-spacing: -0.02em; }
+  h2 { font-size: 12.5pt; margin: 13pt 0 5pt; border-bottom: 1.2px solid #222; padding-bottom: 2pt; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 9pt 0 3pt; page-break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  .muted { color: #444; font-size: 9.5pt; }
+  .meta { margin: 0 0 10pt; }
+  .meta td { padding: 1pt 12pt 1pt 0; vertical-align: top; font-size: 9.6pt; }
+  table.data { width: 100%; border-collapse: collapse; margin: 4pt 0 8pt; font-size: 9.3pt; }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 3pt 6pt; text-align: left; }
+  table.data th { background: #f0f2f5; font-weight: 600; }
+  table.data td.num, table.data th.num { text-align: right; }
+  pre, code { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  pre {
+    background: #161b22; color: #e6edf3; font-size: 7.15pt; line-height: 1.32;
+    padding: 7pt 8pt; border-radius: 4px; overflow: hidden;
+    white-space: pre-wrap; word-break: break-word; margin: 4pt 0 8pt;
+    page-break-inside: avoid;
+  }
+  .caption { font-size: 8.6pt; color: #444; margin: -4pt 0 8pt; font-style: italic; }
+  ul, ol { margin: 2pt 0 7pt 18pt; padding: 0; }
+  li { margin: 0 0 2pt; }
+  .arch {
+    display: grid; grid-template-columns: 1fr; gap: 6pt;
+    border: 1px solid #bbb; padding: 8pt 10pt; margin: 6pt 0 8pt; background: #fafbfc;
+    page-break-inside: avoid;
+  }
+  .box { border: 1px solid #888; padding: 5pt 8pt; background: #fff; border-radius: 3px; font-size: 9pt; }
+  .box b { display: block; font-size: 9.4pt; margin-bottom: 2pt; }
+  .flow { text-align: center; color: #555; font-size: 9pt; margin: 1pt 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; }
+  .keep { page-break-inside: avoid; }
+  a { color: #0b4f8a; text-decoration: none; }
+  .small { font-size: 9pt; }
+  .footer-note { font-size: 8.4pt; color: #555; margin-top: 8pt; }
+  img.shot {
+    width: 100%; max-height: 145pt; object-fit: contain; object-position: top left;
+    border: 1px solid #ccc; margin: 3pt 0 2pt; page-break-inside: avoid; background: #0d1117;
+  }
+</style>
+</head>
+<body>
+
+<h1>Production MLOps Pipeline: 7-Day Bitcoin Close Forecast</h1>
+<p class="muted">Assignment 3 — Flask, Docker, GitHub Actions, Airflow, Kubeflow &amp; Kubernetes &nbsp;·&nbsp; 60 marks</p>
+
+<table class="meta">
+  <tr><td><b>Author</b></td><td>Aousaf Suleman (<code>Aousaf90</code>)</td></tr>
+  <tr><td><b>Repository</b></td><td><a href="https://github.com/Aousaf90/btc-forecast-mlops">github.com/Aousaf90/btc-forecast-mlops</a></td></tr>
+  <tr><td><b>Docker image</b></td><td><a href="https://hub.docker.com/r/aousafs/btc-forecast-api">aousafs/btc-forecast-api</a> &nbsp;(tags: <code>latest</code>, commit SHA)</td></tr>
+  <tr><td><b>Model</b></td><td>Facebook Prophet 1.1.6 &nbsp;·&nbsp; 7-day daily close &nbsp;·&nbsp; hold-out MAPE 8.48% (cluster run)</td></tr>
+</table>
+
+<h2>1. Problem, architecture and model choice</h2>
+<p>
+The system ingests daily BTC-USD OHLCV, trains a time-series model, and serves a 7-day closing-price forecast as a production REST API. Data is pulled with automatic failover (yfinance → Binance → CoinGecko). Orchestration is an Airflow DAG (daily ETL / retrain / reload) plus a compiled Kubeflow pipeline spec. The API is containerised, published by GitHub Actions, and deployed on Minikube with ConfigMap/Secret, PVC, 3-replica Deployment, ClusterIP+NodePort Services, HPA (2–8 @ 60% CPU) and NGINX Ingress.
+</p>
+
+<div class="arch">
+  <div class="box"><b>Market data</b> yfinance (empty-frame = 429) → Binance public klines → CoinGecko. 1,824 daily rows in the cluster run (2021-11-26 → 2026-11-23).</div>
+  <div class="flow">▼ Airflow DAG <code>btc_etl_pipeline</code> @daily</div>
+  <div class="box"><b>fetch_btc_data → preprocess_features → retrain_and_evaluate → trigger_model_reload</b>
+    Raw CSV · MA-7/MA-30 + volatility · MAPE gate ≤ 15% · <code>POST /reload</code></div>
+  <div class="flow">▼ shared volume / Kubernetes PVC at <code>/app/models</code></div>
+  <div class="box"><b>Flask + gunicorn</b> <code>GET /health</code> · <code>POST /predict</code> · <code>GET /metrics</code> · <code>POST /reload</code><br/>
+    K8s: probes on <code>/health</code>, requests 100m/128Mi, limits 500m/512Mi, HPA 2→8, host <code>btc-forecast.local</code></div>
+</div>
+<p class="caption">Figure 1. End-to-end architecture. The Airflow worker writes <code>prophet_model.json</code>; API replicas read it from the PVC and hot-reload without a rolling restart.</p>
+
+<p>
+<b>Why Prophet, not NeuralProphet or LSTM.</b> NeuralProphet pulls PyTorch (~800&nbsp;MB) and would roughly triple the image for no established gain at a 7-day daily horizon. An LSTM would add a GPU-oriented stack the Minikube node does not have. Prophet fits in ~0.2&nbsp;s on CPU, serialises to a 60&nbsp;KB JSON artifact (<code>model_to_json</code>, never pickle — a fitted Prophet does not round-trip reliably across versions, and Airflow writes what Flask reads), and needs identical pins in both images.
+</p>
+<p>
+Hyperparameters were not guessed. A rolling-origin backtest of 12 non-overlapping 7-day windows chose a <b>365-day training window</b> and <code>changepoint_range=0.95</code>. Full 5-year history with Prophet’s default <code>changepoint_range=0.8</code> scored mean MAPE <b>14.70%</b>; the tuned config scored mean MAPE <b>3.49%</b> (best 0.92%, worst 9.58%). The 365-day window dominates: Prophet fits one global piecewise-linear trend, so 2021–2023 BTC regimes bias a 7-day extrapolation. The default changepoint range also places <i>no</i> changepoints in the most recent 20% of the series — exactly the stretch a 7-day forecast extrapolates from.
+</p>
+<p>
+<b>Regressors.</b> 7/30-day moving averages and volatility are computed and persisted (the Airflow preprocess task requires them) but are <i>not</i> passed to <code>add_regressor</code>. A Prophet regressor needs a value for every future date; a 7-day MA over the next 7 days depends on the prices being forecast. Feeding an extrapolated guess would leak that guess into the model. This is a named tradeoff, not an omission.
+</p>
+<p>
+<b>Registration gate.</b> A retrained model replaces the live artifact only if hold-out MAPE ≤ 15%. That sits above the worst backtest window (9.58%, a week BTC fell ~$70k→$62k) and below the untuned baseline’s 14.70% mean, so a genuinely broken model is still caught.
+</p>
+
+<h2>2. Part A — Flask REST API (10 marks)</h2>
+<p>
+<code>app/app.py</code> exposes four JSON endpoints behind gunicorn (<code>gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 2 app:app</code>). One worker is deliberate: each worker deserialises its own Prophet (~80–116&nbsp;MB measured) against the 512Mi pod limit.
+</p>
+<table class="data">
+  <tr><th>Method</th><th>Path</th><th>Contract</th></tr>
+  <tr><td>GET</td><td><code>/health</code></td><td>Always 200 while the process is serving; body includes <code>status</code>, <code>uptime_seconds</code>, <code>model_version</code>, <code>model_loaded</code>. Used by both liveness and readiness probes.</td></tr>
+  <tr><td>POST</td><td><code>/predict</code></td><td>Optional <code>forecast_days</code> (1–90, default 7) or <code>historical_data</code>. Returns dated predictions with 95% intervals.</td></tr>
+  <tr><td>GET</td><td><code>/metrics</code></td><td>MAE / RMSE / MAPE from the latest validation run.</td></tr>
+  <tr><td>POST</td><td><code>/reload</code></td><td>Re-reads the PVC artifact (called by the DAG). Returns <code>changed: true/false</code>.</td></tr>
+</table>
+<p>
+<b>Why /health is never 503 for a missing model.</b> The rubric points both probes at <code>/health</code>. Returning 503 when the PVC is empty would restart-loop a healthy pod on first boot, before Airflow has trained anything. <code>/predict</code> is the endpoint that refuses with 503. Validation errors are 400 (null/non-object body, non-integer <code>forecast_days</code>, too-short history); unknown routes 404; wrong method 405; unhandled exceptions 500. All bodies are JSON, never HTML. 85 pytest tests cover the API and pipeline (46 + 39), 10.52&nbsp;s, all passing.
+</p>
+<img class="shot" src="../screenshots/A4_training.png" alt="Hold-out training metrics and 7-day forecast"/>
+<p class="caption">Figure 2. Part A training + forecast (also <code>screenshots/logs/A1_*.txt</code>, <code>A3_pytest.png</code> — 85 tests passed).</p>
+
+<h2>3. Part B — Containerisation and CI/CD (10 marks)</h2>
+<p>
+<code>app/Dockerfile</code> is multi-stage on <code>python:3.10-slim</code>: dependencies install into a venv in the builder; only the venv is copied into the runtime. The process runs as non-root <code>appuser</code> (uid 1000, matching the PVC <code>fsGroup</code>). Matplotlib is stripped at build time — Prophet guards the import — and a smoke test fails the build if that ever breaks inference. scikit-learn/scipy are not dependencies (metrics are plain numpy).
+</p>
+<table class="data">
+  <tr><th>Build</th><th class="num">Size</th><th>Notes</th></tr>
+  <tr><td>Unoptimised single-stage (sklearn present)</td><td class="num">913 MB</td><td>Baseline</td></tr>
+  <tr><td>Multi-stage, no sklearn, matplotlib stripped</td><td class="num"><b>513 MB</b></td><td>−400 MB (−44%)</td></tr>
+  <tr><td>Drop sklearn+scipy</td><td class="num">~167 MB saved</td><td>Never imported</td></tr>
+  <tr><td>Strip matplotlib</td><td class="num">~34 MB saved</td><td>Plotting unused</td></tr>
+  <tr><td>Multi-stage (gcc, pip cache stay in builder)</td><td class="num">~200 MB saved</td><td></td></tr>
+</table>
+<p>
+<code>docker-compose.yml</code> runs Flask + Airflow (LocalExecutor) + Postgres, sharing a named volume that stands in for the PVC. Full handoff was proven in compose: Airflow trained → API saw the artifact → <code>POST /reload</code> returned <code>changed: true</code> → a new <code>model_version</code> was served. Compose and Minikube are not run together (RAM).
+</p>
+<p>
+<code>.github/workflows/ci_cd.yml</code> triggers on push/PR to <code>main</code>: flake8 + black, then 85 pytest tests, then (main only) buildx push to Docker Hub as <code>latest</code>, full SHA and <code>sha-&lt;short&gt;</code>, using <code>DOCKER_USERNAME</code> / <code>DOCKER_PASSWORD</code> secrets. Latest green run <a href="https://github.com/Aousaf90/btc-forecast-mlops/actions/runs/44799899698">#44799899698</a>: lint 13&nbsp;s, pytest 48&nbsp;s, build+push 35&nbsp;s (GHA layer cache; Prophet is not rebuilt on app-only commits). Image: <a href="https://hub.docker.com/r/aousafs/btc-forecast-api">hub.docker.com/r/aousafs/btc-forecast-api</a> (<code>latest</code> + SHA tags, linux/amd64, 111.81&nbsp;MB compressed).
+<img class="shot" src="../screenshots/B3_gha_ui.png" alt="GitHub Actions CI/CD workflow runs, three green"/>
+<p class="caption">Figure 2b. GitHub Actions UI — three consecutive green CI/CD runs on <code>main</code>.</p>
+</p>
+
+<h2>4. Part C — Airflow DAG and Kubeflow (12 marks)</h2>
+<p>
+<code>dags/btc_etl_pipeline.py</code> is a daily DAG of four PythonOperators. Heavy imports (Prophet) live <i>inside</i> task callables: a module-level import stalled the scheduler (heartbeat recovered after 559&nbsp;s) and left the DAG invisible to <code>dags trigger</code>. Parse time is now 0.135&nbsp;s.
+</p>
+<img class="shot" src="../screenshots/C1_airflow_dag.png" alt="Airflow DAG all four tasks success"/>
+<p class="caption">Figure 3. Manual DAG run — all four tasks success. Transcript: <code>screenshots/logs/C1_airflow_dag.txt</code>.</p>
+<p>
+Reload uses <code>requests</code> against <code>PREDICTION_API_URL</code>, not SimpleHttpOperator, so no extra Airflow Connection is required on a fresh database. If the MAPE gate rejects the model, the reload task skips via XCom rather than POSTing a no-op.
+</p>
+<p>
+<code>kubeflow/btc_kfp_pipeline.py</code> (KFP SDK 2.9) defines three container components — ingest, features, train — all running <code>aousafs/btc-forecast-api:latest</code> with commands verified to exist in that image. Compiled spec: <code>kubeflow/btc_kfp_pipeline.yaml</code> (schema 2.1.0, 5.7&nbsp;KB). A full Kubeflow install was not deployed: it needs ~16&nbsp;GB RAM; the rubric requires the YAML. PEP 563 (<code>from __future__ import annotations</code>) was omitted — it stringifies types and the compiler then rejects missing <code>schema_title</code>.
+</p>
+
+<h2>5. Part D — Kubernetes deployment (18 marks)</h2>
+<p>
+Verified on Minikube v1.39 (Kubernetes v1.37.0, docker driver, 2800&nbsp;Mi / 3 CPU) with addons <code>metrics-server</code> and <code>ingress</code>. Manifests in <code>k8s/</code> apply as <code>kubectl apply -f k8s/</code> (the optional train Job seeds the PVC once). Numbers below are the graded values, implemented literally.
+</p>
+<table class="data">
+  <tr><th>File</th><th>What was applied</th></tr>
+  <tr><td><code>configmap-secret.yaml</code></td><td>ConfigMap: <code>MODEL_STAGE=production</code>, <code>LOG_LEVEL=INFO</code>, <code>PORT=5000</code>. Secret: dummy base64 <code>API_KEY</code> / <code>COINGECKO_API_KEY</code> (public APIs need no key). Both mounted via <code>envFrom</code>.</td></tr>
+  <tr><td><code>pvc.yaml</code></td><td>2&nbsp;Gi RWO, Bound on <code>standard</code>. Mounted at <code>/app/models</code>. Historical CSVs live at <code>/app/models/data</code> so they survive restarts too.</td></tr>
+  <tr><td><code>deployment.yaml</code></td><td><b>3 replicas</b>; liveness GET <code>/health</code> <code>initialDelaySeconds: 15</code>, <code>periodSeconds: 10</code>; readiness GET <code>/health</code>; requests <b>100m / 128Mi</b>; limits <b>500m / 512Mi</b>; non-root uid 1000, <code>fsGroup: 1000</code>.</td></tr>
+  <tr><td><code>service.yaml</code></td><td>ClusterIP <code>btc-forecast-api</code> and NodePort <code>btc-forecast-api-nodeport</code> (30080), both <b>port 80 → targetPort 5000</b>.</td></tr>
+  <tr><td><code>hpa.yaml</code></td><td><b>minReplicas 2, maxReplicas 8, CPU target 60%</b> (autoscaling/v2).</td></tr>
+  <tr><td><code>ingress.yaml</code></td><td>NGINX, host <code>btc-forecast.local</code> → ClusterIP:80. ADDRESS 192.168.49.2.</td></tr>
+</table>
+<p>
+<b>The 3-vs-2 replica mismatch is in the spec.</b> The Deployment starts at 3; the HPA min is 2. Under idle CPU (4%) the HPA correctly scaled the Deployment down to 2. Both numbers were implemented as written rather than “fixed”.
+</p>
+<img class="shot" src="../screenshots/D_kubectl_overview.png" alt="kubectl get pods,svc,hpa,ingress,pvc"/>
+<p class="caption">Figure 4. Cluster overview. Ingress routing confirmed in-cluster with <code>Host: btc-forecast.local</code>. On Docker-Desktop/Mac the node IP is not reachable from the host; use <code>minikube tunnel</code> or port-forward.</p>
+<p>
+Observed RSS with the model loaded is 75–91&nbsp;Mi, inside the 512Mi limit (OOMKill is on limits, not requests). The 128Mi request being below peak usage is therefore acceptable.
+</p>
+
+<h3>D5. Load test and autoscaling</h3>
+<p>
+Idle CPU was 4% of request. Concurrent in-cluster clients (<code>scripts/loadgen.yaml</code>, three pods of 12 threads each POSTing <code>/predict</code>) drove utilisation to <b>251% of the 100m request</b> (250–365&nbsp;mCPU per pod on <code>kubectl top</code>). The HPA rescaled <b>2 → 6 → 8</b> within ~16&nbsp;seconds of seeing the metric, and all eight pods reached Ready. Peak RSS stayed 76–91&nbsp;Mi — still under 512Mi.
+</p>
+<img class="shot" src="../screenshots/D5_hpa_scale.png" alt="HPA scaled to 8 replicas at 251 percent CPU"/>
+<p class="caption">Figure 5. HPA scale-out 2→6→8 at 251% CPU. Full log: <code>screenshots/logs/D5_hpa_scaled.txt</code>. Load was generated in-cluster (<code>scripts/loadgen.yaml</code>); macOS AirPlay owns :5000 so host Locust is not usable here.</p>
+
+<h2>6. Part E — Resilience, end-to-end verification, performance</h2>
+
+<h3>E1. Chaos / self-healing</h3>
+<p>
+At the HPA steady state of 2 replicas, pod <code>btc-forecast-api-6ffb984749-2wk6f</code> was deleted. The ReplicaSet scheduled a replacement immediately (<code>lms4m</code>, IP 10.244.0.13). It was Running at 2&nbsp;s and Ready at 11&nbsp;s; <code>kubectl wait --for=condition=Ready</code> returned on both remaining pods. Desired stayed 2/2 — Kubernetes replaced the killed pod rather than leaving a hole. The new pod loaded the model from the PVC on boot (<code>model_loaded: true</code>, version <code>20261124101746933</code>), confirming the volume outlives the container.
+</p>
+<img class="shot" src="../screenshots/E1_self_healing.png" alt="Pod delete and ReplicaSet replacement"/>
+<p class="caption">Figure 6. Self-healing after <code>kubectl delete pod</code>. Transcript: <code>screenshots/logs/E1_self_healing.txt</code>.</p>
+
+<h3>E2. End-to-end on the cluster</h3>
+<p>
+A Kubernetes Job (<code>k8s/train-job.yaml</code>) using the same image fetched data (yfinance empty → Binance, 1,824 rows), engineered features (1,794 rows), trained Prophet (hold-out 2026-11-17→23: <b>MAE $5,192.55, RMSE $5,343.90, MAPE 8.482%</b>, gate PASS), wrote the JSON artifact to the PVC, and POSTed <code>/reload</code>. Querying the live Service:
+</p>
+<img class="shot" src="../screenshots/E2_live_predict.png" alt="Live Kubernetes API health metrics and 7-day predict"/>
+<p class="caption">Figure 7. Live 7-day forecast from the Kubernetes Service. CI/CD is green (Figure 2b); Airflow DAG success is Figure 3.</p>
+
+<h3>E3. Performance notes</h3>
+<ul>
+  <li>Hold-out MAPE on the cluster (8.48%) matches the backtest’s worst-window character and stays under the 15% gate.</li>
+  <li>Rolling backtest mean MAPE 3.49% vs 14.70% untuned (4.2×).</li>
+  <li>Image 513&nbsp;MB vs 913&nbsp;MB unoptimised; artifact 60&nbsp;KB JSON; train ~0.2&nbsp;s.</li>
+  <li>Pod RSS 75–91&nbsp;Mi with model loaded; 8 replicas under load still &lt; 512Mi each.</li>
+  <li>HPA: 4% idle → 251% under inference → 8/8 Ready.</li>
+</ul>
+
+<h2>7. Operational traps (so they are not reintroduced)</h2>
+<ol>
+  <li>yfinance surfaces Yahoo HTTP 429 as an <i>empty DataFrame</i>, not an exception — treat empty as failure and fail over.</li>
+  <li>Airflow’s Flask 2.2.x is incompatible with the API’s Flask 3.x; requirements are split (<code>requirements.txt</code> shared core, <code>requirements-api.txt</code> for the API only) with a build guard in <code>airflow/Dockerfile</code>.</li>
+  <li>Named volumes are root-owned; <code>airflow-init</code> chowns them to uid 50000.</li>
+  <li>macOS Control Center binds TCP/5000 (AirPlay/AirTunes). Port-forward the Service to 8500 (or disable AirPlay Receiver) when demonstrating from a Mac host.</li>
+</ol>
+
+<p class="footer-note">
+Deliverables: GitHub repository (modular layout matching the spec), public Docker Hub image <code>aousafs/btc-forecast-api</code>, Kubernetes manifests under <code>k8s/</code>, Airflow DAG, compiled KFP YAML, GitHub Actions workflow, and this report. CLI transcripts for every figure live in <code>screenshots/logs/</code>.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+# t=0 10:20:46Z
+NAME                                                   REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/btc-forecast-hpa   Deployment/btc-forecast-api   cpu: 8%/60%   2         8         2          4m9s
+
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/btc-forecast-api   2/2     2            2           4m9s
+
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/btc-forecast-api-6ffb984749-c5tdp   1/1     Running   0          4m9s
+pod/btc-forecast-api-6ffb984749-lms4m   1/1     Running   0          61s
+NAME                                CPU(cores)   MEMORY(bytes)   
+btc-forecast-api-6ffb984749-c5tdp   8m           88Mi            
+btc-forecast-api-6ffb984749-lms4m   54m          82Mi            

@@ -1,0 +1,74 @@
+# peak load  2026-11-24T10:23:37Z
+
+# kubectl get hpa
+NAME               REFERENCE                     TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+btc-forecast-hpa   Deployment/btc-forecast-api   cpu: 251%/60%   2         8         8          7m1s
+
+# kubectl get deploy
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+btc-forecast-api   8/8     8            8           7m1s
+
+# kubectl get pods -l app=btc-forecast-api
+NAME                                READY   STATUS    RESTARTS   AGE     IP            NODE       NOMINATED NODE   READINESS GATES
+btc-forecast-api-6ffb984749-4b4bp   1/1     Running   0          60s     10.244.0.24   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-bmxtg   1/1     Running   0          44s     10.244.0.25   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-c5tdp   1/1     Running   0          7m1s    10.244.0.7    minikube   <none>           <none>
+btc-forecast-api-6ffb984749-h49jt   1/1     Running   0          60s     10.244.0.21   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-lms4m   1/1     Running   0          3m53s   10.244.0.13   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-p5449   1/1     Running   0          60s     10.244.0.22   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-q9gq2   1/1     Running   0          60s     10.244.0.23   minikube   <none>           <none>
+btc-forecast-api-6ffb984749-xv4cz   1/1     Running   0          44s     10.244.0.26   minikube   <none>           <none>
+
+# kubectl top pods
+NAME                                CPU(cores)   MEMORY(bytes)   
+btc-forecast-api-6ffb984749-4b4bp   303m         77Mi            
+btc-forecast-api-6ffb984749-bmxtg   282m         88Mi            
+btc-forecast-api-6ffb984749-c5tdp   357m         81Mi            
+btc-forecast-api-6ffb984749-h49jt   258m         77Mi            
+btc-forecast-api-6ffb984749-lms4m   365m         76Mi            
+btc-forecast-api-6ffb984749-p5449   289m         77Mi            
+btc-forecast-api-6ffb984749-q9gq2   295m         77Mi            
+btc-forecast-api-6ffb984749-xv4cz   277m         82Mi            
+
+# kubectl describe hpa (events = 2 → 6 → 8)
+Name:                                                  btc-forecast-hpa
+Namespace:                                             default
+Labels:                                                app=btc-forecast-api
+                                                       app.kubernetes.io/part-of=btc-forecast-mlops
+Annotations:                                           <none>
+CreationTimestamp:                                     Tue, 24 Nov 2026 15:16:37 +0500
+Reference:                                             Deployment/btc-forecast-api
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  251% (251m) / 60%
+Min replicas:                                          2
+Max replicas:                                          8
+Behavior:
+  Scale Up:
+    Stabilization Window: 0 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Pods     Value: 4    Period: 15 seconds
+      - Type: Percent  Value: 100  Period: 15 seconds
+  Scale Down:
+    Stabilization Window: 60 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Pods  Value: 1  Period: 30 seconds
+Deployment pods:    8 current / 8 desired
+Conditions:
+  Type            Status  Reason              Message
+  ----            ------  ------              -------
+  AbleToScale     True    ReadyForNewScale    recommended size matches current size
+  ScalingActive   True    ValidMetricFound    the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  False   DesiredWithinRange  the desired count is within the acceptable range
+  ScaledToZero    False   NotScaledToZero     the HPA controller did not scale the workload to zero
+Events:
+  Type     Reason                        Age                   From                       Message
+  ----     ------                        ----                  ----                       -------
+  Warning  FailedGetResourceMetric       6m17s (x4 over 7m2s)  horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedComputeMetricsReplicas  6m17s (x4 over 7m2s)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedGetResourceMetric       5m17s (x4 over 6m2s)  horizontal-pod-autoscaler  failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Warning  FailedComputeMetricsReplicas  5m17s (x4 over 6m2s)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Normal   SuccessfulRescale             5m2s                  horizontal-pod-autoscaler  New size: 2; reason: All metrics below target
+  Normal   SuccessfulRescale             61s                   horizontal-pod-autoscaler  New size: 6; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             45s                   horizontal-pod-autoscaler  New size: 8; reason: cpu resource utilization (percentage of request) above target
